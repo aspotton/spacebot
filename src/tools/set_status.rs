@@ -1,6 +1,6 @@
 //! Set status tool for workers.
 
-use crate::{AgentId, ChannelId, ProcessEvent, WorkerId};
+use crate::{floor_char_boundary, AgentId, ChannelId, ProcessEvent, WorkerId};
 use rig::completion::ToolDefinition;
 use rig::tool::Tool;
 use schemars::JsonSchema;
@@ -128,7 +128,7 @@ impl Tool for SetStatusTool {
         // Cap status length to prevent context bloat in the status block.
         // Status is rendered into every channel turn so it should stay short.
         let status = if args.status.len() > 256 {
-            let end = args.status.floor_char_boundary(256);
+            let end = floor_char_boundary(&args.status, 256);
             let boundary = args.status[..end].rfind(char::is_whitespace).unwrap_or(end);
             format!("{}...", &args.status[..boundary])
         } else {

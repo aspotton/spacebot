@@ -3,7 +3,7 @@
 use crate::config::TelegramPermissions;
 use crate::messaging::apply_runtime_adapter_to_conversation_id;
 use crate::messaging::traits::{InboundStream, Messaging};
-use crate::{Attachment, InboundMessage, MessageContent, OutboundResponse, StatusUpdate};
+use crate::{floor_char_boundary, Attachment, InboundMessage, MessageContent, OutboundResponse, StatusUpdate};
 
 use anyhow::Context as _;
 use arc_swap::ArcSwap;
@@ -452,7 +452,7 @@ impl Messaging for TelegramAdapter {
                     }
 
                     let display_text = if text.len() > MAX_MESSAGE_LENGTH {
-                        let end = text.floor_char_boundary(MAX_MESSAGE_LENGTH - 3);
+                        let end = floor_char_boundary(&text, MAX_MESSAGE_LENGTH - 3);
                         format!("{}...", &text[..end])
                     } else {
                         text
@@ -893,7 +893,7 @@ fn build_metadata(
         );
         if let Some(text) = extract_text(reply) {
             let truncated = if text.len() > 200 {
-                format!("{}...", &text[..text.floor_char_boundary(197)])
+                format!("{}...", &text[..floor_char_boundary(&text, 197)])
             } else {
                 text
             };
@@ -952,7 +952,7 @@ async fn send_poll(bot: &Bot, chat_id: ChatId, poll: &crate::Poll) -> anyhow::Re
     let question = if poll.question.len() > 300 {
         format!(
             "{}…",
-            &poll.question[..poll.question.floor_char_boundary(299)]
+            &poll.question[..floor_char_boundary(&poll.question, 299)]
         )
     } else {
         poll.question.clone()
@@ -964,7 +964,7 @@ async fn send_poll(bot: &Bot, chat_id: ChatId, poll: &crate::Poll) -> anyhow::Re
         .take(12)
         .map(|answer| {
             let text = if answer.len() > 100 {
-                format!("{}…", &answer[..answer.floor_char_boundary(99)])
+                format!("{}…", &answer[..floor_char_boundary(&answer, 99)])
             } else {
                 answer.clone()
             };

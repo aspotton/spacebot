@@ -6,10 +6,7 @@
 //! immediately — the result will be delivered when the target agent's cortex
 //! picks up and completes the task.
 
-use crate::conversation::history::ConversationLogger;
-use crate::links::AgentLink;
-use crate::tasks::TaskStore;
-use crate::tools::SkipFlag;
+use crate::{floor_char_boundary, conversation::history::ConversationLogger, links::AgentLink, tasks::TaskStore, tools::SkipFlag};
 
 use arc_swap::ArcSwap;
 use rig::completion::ToolDefinition;
@@ -321,7 +318,7 @@ fn extract_task_title(message: &str) -> String {
     if first_line.len() <= 120 {
         first_line.trim().to_string()
     } else {
-        let boundary = first_line.floor_char_boundary(120);
+        let boundary = floor_char_boundary(&first_line, 120);
         format!("{}...", first_line[..boundary].trim())
     }
 }

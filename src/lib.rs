@@ -324,6 +324,32 @@ pub const CONTROL_EVENT_BUS_CAPACITY: usize = 256;
 /// Default broadcast capacity for the per-agent memory event bus.
 pub const MEMORY_EVENT_BUS_CAPACITY: usize = 1024;
 
+/// Find the nearest character boundary at or before a given byte position.
+///
+/// This is a stable alternative to the unstable `floor_char_boundary()` method.
+/// Returns the byte index of the character boundary at or before `max_bytes`,
+/// or `0` if no valid boundary exists.
+///
+/// # Arguments
+/// * `s` - The string to find a boundary in
+/// * `max_bytes` - The maximum byte position (inclusive)
+///
+/// # Returns
+/// The byte index of the nearest character boundary at or before `max_bytes`.
+/// If `max_bytes >= s.len()`, returns `s.len()`.
+pub fn floor_char_boundary(s: &str, max_bytes: usize) -> usize {
+    if max_bytes >= s.len() {
+        return s.len();
+    }
+
+    // Find the nearest character boundary at or before max_bytes
+    s.char_indices()
+        .rev()
+        .find(|(i, _)| *i <= max_bytes)
+        .map(|(i, _)| i)
+        .unwrap_or(0)
+}
+
 /// Create the default pair of per-agent process event buses.
 ///
 /// - `event_tx` carries control/lifecycle events consumed by channels and UI.

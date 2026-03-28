@@ -8,7 +8,7 @@
 //! persisted to `workspace/saved/` and tracked in the `saved_attachments`
 //! table for later recall.
 
-use crate::AgentDeps;
+use crate::{floor_char_boundary, AgentDeps};
 use crate::config::ApiType;
 use rig::message::{ImageMediaType, MimeType, UserContent};
 use serde::{Deserialize, Serialize};
@@ -423,7 +423,7 @@ async fn download_text_attachment(
 
     // Truncate very large files to avoid blowing up context
     let truncated = if content.len() > 50_000 {
-        let end = content.floor_char_boundary(50_000);
+            let end = floor_char_boundary(&content, 50_000);
         format!(
             "{}...\n[truncated — {} bytes total]",
             &content[..end],
@@ -471,7 +471,7 @@ pub(crate) fn content_from_bytes(bytes: &[u8], attachment: &crate::Attachment) -
     } else if is_text {
         let content = String::from_utf8_lossy(bytes).into_owned();
         let truncated = if content.len() > 50_000 {
-            let end = content.floor_char_boundary(50_000);
+        let end = floor_char_boundary(&content, 50_000);
             format!(
                 "{}...\n[truncated — {} bytes total]",
                 &content[..end],

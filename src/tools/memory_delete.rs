@@ -3,7 +3,7 @@
 //! Soft-deletes a memory by setting its `forgotten` flag. The memory stays in
 //! the database but is excluded from all search and recall operations.
 
-use crate::memory::MemorySearch;
+use crate::{floor_char_boundary, memory::MemorySearch};
 use rig::completion::ToolDefinition;
 use rig::tool::Tool;
 use schemars::JsonSchema;
@@ -158,6 +158,6 @@ fn truncate(s: &str, max: usize) -> &str {
     if s.len() <= max {
         s
     } else {
-        &s[..s.floor_char_boundary(max)]
+        &s[..floor_char_boundary(&s, max)]
     }
 }

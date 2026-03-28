@@ -3,7 +3,7 @@
 use crate::config::DiscordPermissions;
 use crate::messaging::apply_runtime_adapter_to_conversation_id;
 use crate::messaging::traits::{HistoryMessage, InboundStream, Messaging};
-use crate::{InboundMessage, MessageContent, OutboundResponse, StatusUpdate};
+use crate::{floor_char_boundary, InboundMessage, MessageContent, OutboundResponse, StatusUpdate};
 
 use anyhow::Context as _;
 use arc_swap::ArcSwap;
@@ -331,7 +331,7 @@ impl Messaging for DiscordAdapter {
                 let active = self.active_messages.read().await;
                 if let Some(&message_id) = active.get(&message.id) {
                     let display_text = if text.len() > 2000 {
-                        let end = text.floor_char_boundary(1997);
+                        let end = floor_char_boundary(&text, 1997);
                         format!("{}...", &text[..end])
                     } else {
                         text
@@ -960,7 +960,7 @@ async fn build_metadata(
         let truncated = if reply_content.len() > 200 {
             format!(
                 "{}...",
-                &reply_content[..reply_content.floor_char_boundary(200)]
+                &reply_content[..floor_char_boundary(&reply_content, 200)]
             )
         } else {
             reply_content
@@ -1110,7 +1110,7 @@ fn build_action_row(elements: &crate::InteractiveElements) -> CreateActionRow {
                         };
                         let custom_id = btn.custom_id.as_deref().unwrap_or("btn");
                         // Discord limit: custom_id max 100 characters.
-                        let custom_id = &custom_id[..custom_id.floor_char_boundary(100)];
+                        let custom_id = &custom_id[..floor_char_boundary(&custom_id, 100)];
                         CreateButton::new(custom_id)
                             .label(&btn.label)
                             .style(serenity_style)
@@ -1133,7 +1133,7 @@ fn build_action_row(elements: &crate::InteractiveElements) -> CreateActionRow {
             }
 
             // Discord limit: custom_id max 100 characters.
-            let custom_id = &select.custom_id[..select.custom_id.floor_char_boundary(100)];
+            let custom_id = &select.custom_id[..floor_char_boundary(&select.custom_id, 100)];
 
             let mut discord_select =
                 CreateSelectMenu::new(custom_id, CreateSelectMenuKind::String { options });

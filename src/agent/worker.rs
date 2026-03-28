@@ -6,7 +6,7 @@ use crate::error::Result;
 use crate::hooks::SpacebotHook;
 use crate::llm::SpacebotModel;
 use crate::llm::routing::{is_context_overflow_error, is_retriable_error};
-use crate::{AgentDeps, ChannelId, ProcessId, ProcessType, WorkerId};
+use crate::{floor_char_boundary, AgentDeps, ChannelId, ProcessId, ProcessType, WorkerId};
 use rig::agent::AgentBuilder;
 use rig::completion::CompletionModel;
 use std::collections::HashMap;
@@ -896,7 +896,7 @@ impl Worker {
                                 for c in tr.content.iter() {
                                     if let rig::message::ToolResultContent::Text(t) = c {
                                         let text = if t.text.len() > 2000 {
-                                            let end = t.text.floor_char_boundary(2000);
+                                            let end = floor_char_boundary(&t.text, 2000);
                                             format!("{}...[truncated]", &t.text[..end])
                                         } else {
                                             t.text.clone()
@@ -921,7 +921,7 @@ impl Worker {
                             rig::message::AssistantContent::ToolCall(tc) => {
                                 let args = tc.function.arguments.to_string();
                                 let args_display = if args.len() > 500 {
-                                    let end = args.floor_char_boundary(500);
+                                    let end = floor_char_boundary(&args, 500);
                                     format!("{}...[truncated]", &args[..end])
                                 } else {
                                     args

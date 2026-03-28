@@ -1,6 +1,6 @@
 //! Memory maintenance: decay, prune, merge, reindex.
 
-use crate::error::Result;
+use crate::{floor_char_boundary, error::Result};
 use crate::memory::{EmbeddingModel, EmbeddingTable, Memory, MemoryStore, MemoryType};
 use anyhow::Context;
 
@@ -333,7 +333,7 @@ fn merged_memory_content(winner: String, loser: &str) -> String {
         return merged;
     }
 
-    let boundary = merged.floor_char_boundary(MAX_MERGED_MEMORY_CONTENT_BYTES);
+    let boundary = floor_char_boundary(&merged, MAX_MERGED_MEMORY_CONTENT_BYTES);
     merged[..boundary].to_string()
 }
 

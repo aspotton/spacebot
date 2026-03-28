@@ -2,7 +2,7 @@
 
 use crate::conversation::ConversationLogger;
 
-use crate::{ChannelId, OutboundResponse, RoutedSender};
+use crate::{floor_char_boundary, ChannelId, OutboundResponse, RoutedSender};
 use regex::Regex;
 use rig::completion::ToolDefinition;
 use rig::tool::Tool;
@@ -451,7 +451,7 @@ impl Tool for ReplyTool {
         let response = if let Some(name) = thread_name {
             // Cap thread names at 100 characters (Discord limit)
             let thread_name = if name.len() > 100 {
-                name[..name.floor_char_boundary(100)].to_string()
+                name[..floor_char_boundary(&name, 100)].to_string()
             } else {
                 name.to_string()
             };

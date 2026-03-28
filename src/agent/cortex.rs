@@ -22,7 +22,8 @@ use crate::memory::search::{SearchConfig, SearchMode, SearchSort};
 use crate::memory::types::{Association, MemoryType, RelationType};
 use crate::tasks::{TaskStatus, UpdateTaskInput};
 use crate::{
-    AgentDeps, AgentId, BranchId, ChannelId, ProcessEvent, ProcessId, ProcessType, WorkerId,
+    floor_char_boundary, AgentDeps, AgentId, BranchId, ChannelId, ProcessEvent, ProcessId,
+    ProcessType, WorkerId,
 };
 
 use futures::FutureExt as _;
@@ -3901,7 +3902,7 @@ async fn notify_delegation_completion(
 
     // Truncate very long results for the notification message.
     let truncated_result = if result_summary.len() > 500 {
-        let boundary = result_summary.floor_char_boundary(500);
+        let boundary = floor_char_boundary(&result_summary, 500);
         format!("{}... [truncated]", &result_summary[..boundary])
     } else {
         result_summary.to_string()

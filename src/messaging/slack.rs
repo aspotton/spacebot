@@ -24,7 +24,7 @@
 use crate::config::{SlackCommandConfig, SlackPermissions};
 use crate::messaging::apply_runtime_adapter_to_conversation_id;
 use crate::messaging::traits::{HistoryMessage, InboundStream, Messaging};
-use crate::{InboundMessage, MessageContent, OutboundResponse, StatusUpdate};
+use crate::{floor_char_boundary, InboundMessage, MessageContent, OutboundResponse, StatusUpdate};
 
 use anyhow::Context as _;
 use arc_swap::ArcSwap;
@@ -1093,7 +1093,7 @@ impl Messaging for SlackAdapter {
                 let active = self.active_messages.read().await;
                 if let Some(ts) = active.get(&message.id) {
                     let display_text = if text.len() > 12_000 {
-                        let end = text.floor_char_boundary(11_997);
+                        let end = floor_char_boundary(&text, 11_997);
                         format!("{}...", &text[..end])
                     } else {
                         text

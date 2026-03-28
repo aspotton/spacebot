@@ -20,8 +20,8 @@ use crate::error::{AgentError, Result};
 use crate::hooks::SpacebotHook;
 use crate::llm::SpacebotModel;
 use crate::{
-    AgentDeps, BranchId, ChannelId, InboundMessage, OutboundResponse, ProcessEvent, ProcessId,
-    ProcessType, RoutedResponse, RoutedSender, WorkerId,
+    floor_char_boundary, AgentDeps, BranchId, ChannelId, InboundMessage, OutboundResponse,
+    ProcessEvent, ProcessId, ProcessType, RoutedResponse, RoutedSender, WorkerId,
 };
 use rig::agent::AgentBuilder;
 use rig::completion::CompletionModel;
@@ -3104,7 +3104,7 @@ impl Channel {
                 // Truncate very long results for the history record — the user
                 // already saw the full version via the reply tool.
                 let truncated = if r.result.len() > 500 {
-                    let boundary = r.result.floor_char_boundary(500);
+                    let boundary = floor_char_boundary(&r.result, 500);
                     format!("{}... [truncated]", &r.result[..boundary])
                 } else {
                     r.result.clone()

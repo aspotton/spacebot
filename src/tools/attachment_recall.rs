@@ -1,7 +1,7 @@
 //! Attachment recall tool for channels. Retrieves saved attachment info
 //! and optionally re-loads file content for re-analysis or delegation.
 
-use crate::ChannelId;
+use crate::{floor_char_boundary, ChannelId};
 
 use rig::completion::ToolDefinition;
 use rig::tool::Tool;
@@ -353,7 +353,7 @@ impl AttachmentRecallTool {
             // receives it through the serialized tool output.
             let text = String::from_utf8_lossy(&bytes);
             let truncated = if text.len() > 50_000 {
-                let end = text.floor_char_boundary(50_000);
+                let end = floor_char_boundary(&text, 50_000);
                 format!(
                     "{}...\n[truncated — {} bytes total]",
                     &text[..end],

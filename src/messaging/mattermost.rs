@@ -3,7 +3,7 @@
 use crate::config::MattermostPermissions;
 use crate::messaging::apply_runtime_adapter_to_conversation_id;
 use crate::messaging::traits::{HistoryMessage, InboundStream, Messaging};
-use crate::{InboundMessage, MessageContent, OutboundResponse, StatusUpdate};
+use crate::{floor_char_boundary, InboundMessage, MessageContent, OutboundResponse, StatusUpdate};
 
 use anyhow::Context as _;
 use arc_swap::ArcSwap;
@@ -717,9 +717,7 @@ impl Messaging for MattermostAdapter {
                         if active.last_edit.elapsed() > STREAM_EDIT_THROTTLE {
                             let display_text = if active.accumulated_text.len() > MAX_MESSAGE_LENGTH
                             {
-                                let end = active
-                                    .accumulated_text
-                                    .floor_char_boundary(MAX_MESSAGE_LENGTH - 3);
+                                let end = floor_char_boundary(&active.accumulated_text, MAX_MESSAGE_LENGTH - 3);
                                 format!("{}...", &active.accumulated_text[..end])
                             } else {
                                 active.accumulated_text.clone()
@@ -1504,7 +1502,7 @@ fn split_message(text: &str, max_len: usize) -> Vec<String> {
             break;
         }
 
-        let search_end = remaining.floor_char_boundary(max_len);
+        let search_end = floor_char_boundary(&remaining, max_len);
         let search_region = &remaining[..search_end];
         // Ignore a break point at position 0 to avoid pushing an empty chunk
         // (e.g. when the region starts with a newline or space).
@@ -1514,7 +1512,7 @@ fn split_message(text: &str, max_len: usize) -> Vec<String> {
             .filter(|&pos| pos > 0)
             .unwrap_or(search_end);
 
-        let end = remaining.floor_char_boundary(break_point);
+        let end = floor_char_boundary(&remaining, break_point);
         chunks.push(remaining[..end].to_string());
         remaining = remaining[end..].trim_start_matches('\n').trim_start();
     }

@@ -82,7 +82,7 @@ Three endpoints under `/api/agents/ingest/`:
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/agents/ingest/files?agent_id=` | List files with status and chunk progress |
-| `POST` | `/agents/ingest/upload?agent_id=` | Multipart file upload to ingest directory |
+| `POST` | `/agents/ingest/files?agent_id=` | Multipart file upload to ingest directory |
 | `DELETE` | `/agents/ingest/files?agent_id=&content_hash=` | Remove a history record |
 
 The upload endpoint sanitizes filenames against path traversal and deduplicates with a UUID suffix if a file with the same name already exists.

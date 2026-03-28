@@ -1665,7 +1665,7 @@ export const api = {
 			formData.append("files", file);
 		}
 		const response = await fetch(
-			`${getApiBase()}/agents/ingest/upload?agent_id=${encodeURIComponent(agentId)}`,
+			`${getApiBase()}/agents/ingest/files?agent_id=${encodeURIComponent(agentId)}`,
 			{ method: "POST", body: formData },
 		);
 		if (!response.ok) {

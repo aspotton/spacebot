@@ -31,6 +31,40 @@ fn is_hop_by_hop(name: &HeaderName) -> bool {
 const PORT_MIN: u16 = 10000;
 const PORT_MAX: u16 = 60000;
 
+fn decode_base64url_path(value: &str) -> Option<String> {
+    use base64::Engine;
+
+    let mut standard_b64 = value.replace('-', "+").replace('_', "/");
+    let padding = 4 - (standard_b64.len() % 4);
+    if padding < 4 {
+        standard_b64.push_str(&"=".repeat(padding));
+    }
+
+    base64::engine::general_purpose::STANDARD
+        .decode(&standard_b64)
+        .ok()
+        .map(|bytes| String::from_utf8_lossy(&bytes).to_string())
+}
+
+fn decode_opencode_route(remainder: &str) -> String {
+    if remainder.is_empty() {
+        return remainder.to_string();
+    }
+
+    let first_segment = remainder.split('/').next().unwrap_or(remainder);
+
+    if !first_segment.contains('-') && !first_segment.contains('_') && first_segment.len() <= 20 {
+        return remainder.to_string();
+    }
+
+    if let Some(decoded_dir) = decode_base64url_path(first_segment) {
+        let rest = remainder.strip_prefix(first_segment).unwrap_or("");
+        return format!("{decoded_dir}{rest}");
+    }
+
+    remainder.to_string()
+}
+
 /// Reverse proxy handler. Matches `/api/opencode/{port}/{*path}`.
 ///
 /// Validates the port is in the OpenCode deterministic range, then forwards
@@ -59,10 +93,12 @@ pub(super) async fn opencode_proxy(request: Request) -> Response {
         Err(_) => return (StatusCode::BAD_REQUEST, "invalid port").into_response(),
     };
 
+    let decoded_remainder = decode_opencode_route(remainder);
+
     // Build target URL preserving query string
     let target_url = match uri.query() {
-        Some(query) => format!("http://127.0.0.1:{port}/{remainder}?{query}"),
-        None => format!("http://127.0.0.1:{port}/{remainder}"),
+        Some(query) => format!("http://127.0.0.1:{port}/{decoded_remainder}?{query}"),
+        None => format!("http://127.0.0.1:{port}/{decoded_remainder}"),
     };
 
     // Build the proxied request

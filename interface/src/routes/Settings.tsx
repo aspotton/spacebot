@@ -400,10 +400,6 @@ export function Settings() {
 		if (!editingProvider || !modelInput.trim()) return false;
 
 		if (editingProvider === "azure") {
-			if (!keyInput.trim()) {
-				setTestResult({ success: false, message: "API key is required for Azure OpenAI" });
-				return false;
-			}
 			if (!azureBaseUrl.trim()) {
 				setTestResult({ success: false, message: "Base URL is required for Azure OpenAI" });
 				return false;
@@ -454,10 +450,6 @@ export function Settings() {
 		if (!editingProvider || !modelInput.trim()) return;
 
 		if (editingProvider === "azure") {
-			if (!keyInput.trim()) {
-				setMessage({ text: "API key is required for Azure OpenAI", type: "error" });
-				return;
-			}
 			if (!azureBaseUrl.trim()) {
 				setMessage({ text: "Base URL is required for Azure OpenAI", type: "error" });
 				return;
@@ -1029,7 +1021,7 @@ export function Settings() {
 								</Button>
 							<Button
 								onClick={handleSave}
-								disabled={!keyInput.trim() || !azureBaseUrl.trim() || !azureApiVersion.trim() || !azureDeployment.trim()}
+								disabled={!azureBaseUrl.trim() || !azureApiVersion.trim() || !azureDeployment.trim()}
 								loading={updateMutation.isPending}
 								size="sm"
 							>

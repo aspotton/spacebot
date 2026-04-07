@@ -3382,7 +3382,11 @@ async fn pickup_one_ready_task(deps: &AgentDeps, logger: &CortexLogger) -> anyho
         Vec::new(), // no initial history for cortex task workers
         crate::conversation::settings::WorkerMemoryMode::None,
         None, // No model override for cortex workers
-        Some(task.metadata.clone()),
+        {
+            let mut meta = task.metadata.clone();
+            meta["task_number"] = serde_json::json!(task.task_number);
+            Some(meta)
+        },
     );
 
     // Detached workers are not channel-owned, so injection senders are not

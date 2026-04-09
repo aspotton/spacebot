@@ -14,6 +14,8 @@ import {
 	faBriefcase,
 	faUsers,
 	faTableColumns,
+	faCrown,
+	faClipboardList,
 	faPlus,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -35,6 +37,8 @@ const PRESET_ICONS: Record<string, IconDefinition> = {
 	briefcase: faBriefcase,
 	users: faUsers,
 	kanban: faTableColumns,
+	crown: faCrown,
+	"clipboard-list": faClipboardList,
 };
 
 function PresetCard({

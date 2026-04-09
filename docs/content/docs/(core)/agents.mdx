@@ -145,6 +145,79 @@ You are part of a multi-agent system. Here is your position:
 
 The agent sees its position in the hierarchy before processing any message. Authority framing comes from the link structure — the agent knows who to escalate to, who to delegate to, and who to collaborate with.
 
+## Hierarchy Injection
+
+Behavioral rules are not hardcoded in preset `ROLE.md` files. Instead, Spacebot injects prompt fragments dynamically at prompt assembly time based on the agent's position in the communication graph. This means any agent can join a hierarchy without modifying their markdown files.
+
+### Fragment Composition
+
+Four prompt fragments are available for injection:
+
+| Fragment | When Injected | Purpose |
+|----------|---------------|---------|
+| `delegation.md.j2` | Agent has subordinates | Rules for delegating work downward, tracking delegation chains, and managing subordinate tasks |
+| `notification.md.j2` | Agent has superiors | Rules for escalating issues, notifying upward, and bubble-up notification chains |
+| `task_access.md.j2` | Agent has subordinates | Permissions for viewing and modifying subordinate tasks, parent-child task auto-completion |
+| `anti_bounce.md.j2` | Agent has any links | Prevents bouncing messages back to the sender, ensures forward progress |
+
+### Injection by Role
+
+The fragments injected depend on the agent's position:
+
+- **Agents with subordinates** → `delegation.md.j2` + `task_access.md.j2` + `anti_bounce.md.j2`
+- **Agents with superiors** → `notification.md.j2` + `anti_bounce.md.j2`
+- **Agents with only peers** → `anti_bounce.md.j2`
+
+### Task Access and Modification Guards
+
+When an agent has subordinates, the `task_access.md.j2` fragment grants:
+
+- Visibility into subordinate task states and progress
+- Ability to modify subordinate task parameters
+- **Parent-child task auto-completion** — when a subordinate completes a task, the parent task is automatically updated
+- **In-progress modification guard** — prevents modifying tasks that are actively being worked on
+
+### Bubble-Up Notification Chain
+
+The `notification.md.j2` fragment establishes escalation rules:
+
+- Issues that cannot be resolved at the current level escalate upward
+- Escalation chains (`escalation_chain`) prevent infinite loops
+- Notifications bubble up through the hierarchy until resolved or reaching the top
+
+### Configuration Example
+
+```toml
+[[agents]]
+id = "boss-agent"
+preset = "boss-agent"
+
+[[agents]]
+id = "planning-lead"
+preset = "planning-lead"
+
+[[agents]]
+id = "engineering-assistant"
+preset = "engineering-assistant"
+
+[[links]]
+from = "boss-agent"
+to = "planning-lead"
+direction = "two_way"
+kind = "hierarchical"
+
+[[links]]
+from = "planning-lead"
+to = "engineering-assistant"
+direction = "two_way"
+kind = "hierarchical"
+```
+
+In this example:
+- **boss-agent** gets delegation + task_access + anti_bounce fragments
+- **planning-lead** gets delegation + task_access + notification + anti_bounce (has both subordinates and superiors)
+- **engineering-assistant** gets notification + anti_bounce fragments
+
 ## Humans
 
 Org-level humans represent real people in the organization. They appear as nodes in the topology graph and can be linked to agents.

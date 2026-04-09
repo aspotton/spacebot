@@ -2152,6 +2152,7 @@ impl Channel {
                 is_human,
                 role,
                 description,
+                capability_summary: None,
             };
 
             match link.kind {

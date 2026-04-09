@@ -405,6 +405,7 @@ async fn dump_worker_context() {
         deps.runtime_config.clone(),
         Default::default(),
         deps.memory_search.clone(),
+        None,
     );
 
     let tool_defs = worker_tool_server
@@ -589,6 +590,7 @@ async fn dump_all_contexts() {
         deps.runtime_config.clone(),
         Default::default(),
         deps.memory_search.clone(),
+        None,
     );
     let worker_tool_defs = worker_tool_server.get_tool_defs(None).await.unwrap();
     let worker_tools_text = format_tool_defs(&worker_tool_defs);

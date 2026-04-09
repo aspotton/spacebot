@@ -59,6 +59,7 @@ pub mod skip;
 pub mod spacebot_docs;
 pub mod spawn_worker;
 pub mod task_create;
+pub mod task_get;
 pub mod task_list;
 pub mod task_update;
 pub mod web_search;
@@ -139,6 +140,7 @@ pub use spawn_worker::{
     DetachedSpawnWorkerTool, SpawnWorkerArgs, SpawnWorkerError, SpawnWorkerOutput, SpawnWorkerTool,
 };
 pub use task_create::{TaskCreateArgs, TaskCreateError, TaskCreateOutput, TaskCreateTool};
+pub use task_get::{TaskGetArgs, TaskGetError, TaskGetOutput, TaskGetTool};
 pub use task_list::{TaskListArgs, TaskListError, TaskListOutput, TaskListTool};
 pub use task_update::{TaskUpdateArgs, TaskUpdateError, TaskUpdateOutput, TaskUpdateTool};
 pub use web_search::{SearchResult, WebSearchArgs, WebSearchError, WebSearchOutput, WebSearchTool};
@@ -177,11 +179,28 @@ use crate::memory::MemorySearch;
 use crate::sandbox::Sandbox;
 use crate::tasks::TaskStore;
 use crate::{AgentId, ChannelId, ProcessEvent, RoutedSender, WorkerId};
-use rig::tool::Tool as _;
+use arc_swap::ArcSwap;
 use rig::tool::server::{ToolServer, ToolServerHandle};
+use rig::tool::Tool as _;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::broadcast;
+
+/// Configuration for delegation tools on a worker's ToolServer.
+///
+/// When `Some`, the worker receives `SendAgentMessageTool`, `TaskListTool`,
+/// `TaskGetTool`, and `TaskUpdateTool` so it can delegate subtasks, inspect
+/// task state, and manage its assigned task.
+pub struct DelegationConfig {
+    pub links: Arc<ArcSwap<Vec<crate::links::AgentLink>>>,
+    pub agent_names: Arc<HashMap<String, String>>,
+    pub conversation_logger: Arc<crate::conversation::history::ConversationLogger>,
+    pub originating_channel: Option<String>,
+    pub parent_task_number: Option<i64>,
+    pub delegation_chain: Option<Vec<String>>,
+    pub escalation_chain: Option<Vec<String>>,
+}
 
 #[derive(Debug, Clone)]
 pub enum BranchToolProfile {
@@ -652,11 +671,12 @@ pub fn create_worker_tool_server(
     runtime_config: Arc<RuntimeConfig>,
     worker_memory_mode: WorkerMemoryMode,
     memory_search: Arc<MemorySearch>,
+    delegation_config: Option<DelegationConfig>,
 ) -> ToolServerHandle {
     let mut server = ToolServer::new()
         .tool(ShellTool::new(workspace.clone(), sandbox.clone()))
         .tool(TaskUpdateTool::for_worker(
-            task_store,
+            task_store.clone(),
             agent_id.clone(),
             worker_id,
         ))
@@ -692,8 +712,8 @@ pub fn create_worker_tool_server(
         server = server
             .tool(memory_save_with_events(
                 memory_search.clone(),
-                agent_id,
-                event_tx,
+                agent_id.clone(),
+                event_tx.clone(),
                 None,
             ))
             .tool(MemoryDeleteTool::new(memory_search));
@@ -701,6 +721,19 @@ pub fn create_worker_tool_server(
 
     for mcp_tool in mcp_tools {
         server = server.tool(mcp_tool);
+    }
+
+    if let Some(ref config) = delegation_config {
+        server = server.tool(SendAgentMessageTool::new(
+            agent_id.clone(),
+            config.links.clone(),
+            config.agent_names.clone(),
+            task_store.clone(),
+            (*config.conversation_logger).clone(),
+        ));
+        server = server.tool(TaskListTool::new(task_store.clone(), agent_id.to_string()));
+        server = server.tool(TaskGetTool::new(task_store.clone(), agent_id.to_string()));
+        server = server.tool(TaskUpdateTool::for_branch(task_store, agent_id.clone()));
     }
 
     server.run()

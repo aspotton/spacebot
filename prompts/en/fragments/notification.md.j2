@@ -1,0 +1,21 @@
+## Notification Handling for Delegated Tasks
+
+When you delegate work via `send_agent_message`, you will be notified automatically when the task completes. Follow these rules for handling notifications and reporting results.
+
+### Synthesize Before Reporting
+
+When a subordinate completes a delegated task, do not forward their raw output upward. Synthesize the results — extract key findings, decisions, and outcomes. Present a clean conclusion to your delegator.
+
+### Bubble-Up Chain
+
+Notify your immediate delegator — not the original requestor. Results flow up one level at a time. Each level synthesizes before passing upward.
+
+### Task Completion Rules
+
+- Never mark your own task as done until all subtasks you delegated are complete.
+- Delegation is progress, not a blocker. Report that work is underway, not that you are waiting.
+- If a subordinate fails, assess whether you can re-delegate, handle it yourself, or need to escalate.
+
+### WAIT for Completion — Do NOT Poll for Status
+
+After delegating via `send_agent_message`, the cortex will notify you automatically when the task completes. Do NOT spawn workers to check status. Do NOT create tasks to check on other tasks. Call `task_list` at most once to verify the task was created, then wait for the completion notification.

@@ -135,6 +135,18 @@ fn lookup(lang: &str, key: &str) -> &'static str {
         ("en", "fragments/org_context") => {
             include_str!("../../prompts/en/fragments/org_context.md.j2")
         }
+        ("en", "fragments/delegation") => {
+            include_str!("../../prompts/en/fragments/delegation.md.j2")
+        }
+        ("en", "fragments/notification") => {
+            include_str!("../../prompts/en/fragments/notification.md.j2")
+        }
+        ("en", "fragments/task_access") => {
+            include_str!("../../prompts/en/fragments/task_access.md.j2")
+        }
+        ("en", "fragments/anti_bounce") => {
+            include_str!("../../prompts/en/fragments/anti_bounce.md.j2")
+        }
         // Coalesce Hint
         ("en", "fragments/coalesce_hint") => {
             include_str!("../../prompts/en/fragments/coalesce_hint.md.j2")

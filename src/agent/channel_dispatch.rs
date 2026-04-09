@@ -612,6 +612,7 @@ async fn spawn_worker_inner(
             initial_history,
             worker_context.memory,
             worker_model_override,
+            None,
         );
         let worker_id = worker.id;
         state
@@ -638,6 +639,7 @@ async fn spawn_worker_inner(
             initial_history,
             worker_context.memory,
             worker_model_override,
+            None,
         );
         state
             .worker_injections

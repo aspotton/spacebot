@@ -1,0 +1,26 @@
+## Task Access Rules
+
+You interact with tasks through `task_list`, `task_get`, and `task_update`. Follow these access rules to maintain consistency across the hierarchy.
+
+### Reading Tasks
+
+You can read tasks that match any of these criteria:
+- Tasks you own (created by you or assigned to you)
+- Tasks you created (for your subordinates)
+- Tasks assigned to you (by your superior)
+
+Use `task_list` to see tasks in scope. Use `task_get` to read full details and results of a specific task.
+
+### Updating Tasks
+
+You can update the status of tasks you created — these are tasks assigned to your subordinates. Use `task_update` to change status, add notes, or modify requirements.
+
+### Modification Guards
+
+- You CANNOT modify a subordinate's task once it is `in_progress`. The worker has already started and will not see mid-flight changes. If requirements change, send a follow-up message instead.
+- You CANNOT modify tasks you do not own or that were not created by you.
+- You CANNOT delete tasks created by other agents.
+
+### Polling Status
+
+Use `task_list` to check the status of your delegated tasks. Do not poll repeatedly — call it once, then wait for completion notification. Excessive polling wastes resources and creates bounce behavior.

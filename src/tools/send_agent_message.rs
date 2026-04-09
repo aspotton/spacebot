@@ -40,6 +40,12 @@ pub struct SendAgentMessageTool {
     /// The originating channel (conversation_id) where the user request came from.
     /// Set per-turn so task completion notifications route back to the right place.
     originating_channel: Option<String>,
+    /// Task number of the delegating agent's task, for parent-child auto-completion.
+    parent_task_number: Option<i64>,
+    /// Chain of agent IDs through which this delegation has passed, for loop detection.
+    delegation_chain: Option<Vec<String>>,
+    /// Chain of agent IDs through which an escalation has passed, for loop detection.
+    escalation_chain: Option<Vec<String>>,
     working_memory: Option<Arc<crate::memory::WorkingMemoryStore>>,
 }
 
@@ -67,6 +73,9 @@ impl SendAgentMessageTool {
             conversation_logger,
             skip_flag: None,
             originating_channel: None,
+            parent_task_number: None,
+            delegation_chain: None,
+            escalation_chain: None,
             working_memory: None,
         }
     }
@@ -81,6 +90,25 @@ impl SendAgentMessageTool {
     /// route back to the conversation where the user asked for the work.
     pub fn with_originating_channel(mut self, channel_id: String) -> Self {
         self.originating_channel = Some(channel_id);
+        self
+    }
+
+    /// Set the parent task number so the cortex can auto-complete the parent
+    /// when this delegated task finishes.
+    pub fn with_parent_task_number(mut self, task_number: i64) -> Self {
+        self.parent_task_number = Some(task_number);
+        self
+    }
+
+    /// Set the delegation chain for loop detection.
+    pub fn with_delegation_chain(mut self, chain: Vec<String>) -> Self {
+        self.delegation_chain = Some(chain);
+        self
+    }
+
+    /// Set the escalation chain for loop detection.
+    pub fn with_escalation_chain(mut self, chain: Vec<String>) -> Self {
+        self.escalation_chain = Some(chain);
         self
     }
 
@@ -177,6 +205,26 @@ impl Tool for SendAgentMessageTool {
             ))
         })?;
 
+        // Check for delegation loops: if target agent is already in the chain, reject.
+        if let Some(ref chain) = self.delegation_chain {
+            if chain.contains(&target_agent_id) {
+                return Err(SendAgentMessageError(format!(
+                    "can't delegate to agent '{}': delegation loop detected. Chain: {:?}",
+                    args.target, chain
+                )));
+            }
+        }
+
+        // Check for escalation loops: if target agent is already in the escalation chain, reject.
+        if let Some(ref chain) = self.escalation_chain {
+            if chain.contains(&target_agent_id) {
+                return Err(SendAgentMessageError(format!(
+                    "can't escalate to agent '{}': escalation loop detected. Chain: {:?}",
+                    args.target, chain
+                )));
+            }
+        }
+
         // Look up the link between sending agent and target
         let links = self.links.load();
         let link = crate::links::find_link_between(&links, &self.agent_id, &target_agent_id)
@@ -214,10 +262,22 @@ impl Tool for SendAgentMessageTool {
         let title = extract_task_title(&args.message);
 
         // Build task metadata with delegation context.
+        let delegation_chain = self.delegation_chain.clone().map(|mut chain| {
+            chain.push(sending_agent_id.to_string());
+            chain
+        });
+        let escalation_chain = self.escalation_chain.clone().map(|mut chain| {
+            chain.push(sending_agent_id.to_string());
+            chain
+        });
+
         let metadata = serde_json::json!({
             "delegated_by": sending_agent_id,
             "delegating_agent_id": sending_agent_id,
             "originating_channel": self.originating_channel,
+            "parent_task_number": self.parent_task_number,
+            "delegation_chain": delegation_chain,
+            "escalation_chain": escalation_chain,
         });
 
         // Create the task in the global store with cross-agent assignment.

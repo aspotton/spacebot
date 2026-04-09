@@ -671,6 +671,7 @@ pub(super) async fn inspect_prompt(
                     is_human,
                     role,
                     description,
+                    capability_summary: None,
                 };
                 match link.kind {
                     crate::links::LinkKind::Hierarchical => {

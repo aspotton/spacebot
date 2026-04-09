@@ -122,6 +122,22 @@ impl PromptEngine {
             "fragments/projects_context",
             crate::prompts::text::get("fragments/projects_context"),
         )?;
+        env.add_template(
+            "fragments/delegation",
+            crate::prompts::text::get("fragments/delegation"),
+        )?;
+        env.add_template(
+            "fragments/notification",
+            crate::prompts::text::get("fragments/notification"),
+        )?;
+        env.add_template(
+            "fragments/task_access",
+            crate::prompts::text::get("fragments/task_access"),
+        )?;
+        env.add_template(
+            "fragments/anti_bounce",
+            crate::prompts::text::get("fragments/anti_bounce"),
+        )?;
 
         // System message fragments
         env.add_template(
@@ -647,6 +663,26 @@ impl PromptEngine {
         )
     }
 
+    /// Render the delegation fragment for instructing how to delegate work.
+    pub fn render_delegation(&self, context: Value) -> Result<String> {
+        self.render("fragments/delegation", context)
+    }
+
+    /// Render the notification fragment for notification-related guidance.
+    pub fn render_notification(&self, context: Value) -> Result<String> {
+        self.render("fragments/notification", context)
+    }
+
+    /// Render the task_access fragment for task access control guidance.
+    pub fn render_task_access(&self, context: Value) -> Result<String> {
+        self.render("fragments/task_access", context)
+    }
+
+    /// Render the anti_bounce fragment for preventing duplicate work.
+    pub fn render_anti_bounce(&self, context: Value) -> Result<String> {
+        self.render("fragments/anti_bounce", context)
+    }
+
     /// Render the channel system prompt with all dynamic components including org context.
     #[allow(clippy::too_many_arguments)]
     pub fn render_channel_prompt_with_links(
@@ -722,6 +758,115 @@ pub struct LinkedAgent {
     /// style, etc. Loaded from `HUMAN.md` on disk. Only set for humans.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    /// Capability summary derived from preset type. Only set for agents.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub capability_summary: Option<String>,
+}
+
+/// Maps preset IDs to one-line capability summaries for org context rendering.
+fn capability_summary_for_preset(preset_id: &str) -> Option<&'static str> {
+    match preset_id {
+        "engineering-assistant" => Some("Handles code implementation, reviews, and technical tasks"),
+        "research-analyst" => Some("Conducts research, analysis, and evidence-based reporting"),
+        "project-manager" => Some("Tracks work, coordinates across teams, manages scope and timelines"),
+        "community-manager" => Some("Manages community engagement, moderation, and member support"),
+        "customer-support" => Some("Handles user inquiries, troubleshooting, and support workflows"),
+        "content-writer" => Some("Creates and edits written content, documentation, and copy"),
+        "sales-bdr" => Some("Manages outbound sales, lead qualification, and pipeline development"),
+        "executive-assistant" => Some("Coordinates executive schedules, priorities, and communications"),
+        "main-agent" => Some("General-purpose agent with broad capabilities"),
+        _ => None,
+    }
+}
+
+/// Build an OrgContext for a given agent based on its hierarchical links.
+///
+/// Classifies each linked agent as superior, subordinate, or peer based on
+/// link direction and kind. Derives capability summaries from preset types.
+/// Caps each category at 10 entries to prevent context bloat.
+pub fn build_org_context_for_agent(
+    agent_id: &str,
+    links: &[crate::links::AgentLink],
+    humans: &[(String, String, Option<String>)],
+    agent_names: &HashMap<String, String>,
+) -> Option<OrgContext> {
+    use crate::links::{LinkDirection, LinkKind};
+
+    let mut superiors = Vec::new();
+    let mut subordinates = Vec::new();
+    let mut peers = Vec::new();
+
+    for link in links {
+        let (other_id, is_superior, is_subordinate) = if link.from_agent_id == agent_id {
+            (link.to_agent_id.as_str(), false, true)
+        } else if link.to_agent_id == agent_id {
+            (link.from_agent_id.as_str(), true, false)
+        } else {
+            continue;
+        };
+
+        let name = agent_names
+            .get(other_id)
+            .cloned()
+            .unwrap_or_else(|| other_id.to_string());
+
+        let is_human = humans.iter().any(|(id, _, _)| id == other_id);
+        let (role, description) = if is_human {
+            humans
+                .iter()
+                .find(|(id, _, _)| id == other_id)
+                .map(|(_, n, d)| (Some(n.clone()), d.clone()))
+                .unwrap_or((None, None))
+        } else {
+            (None, None)
+        };
+
+        let capability_summary = if !is_human {
+            // Try to derive preset type from agent name or ID
+            capability_summary_for_preset(other_id).or_else(|| {
+                // Check if the agent name matches a known preset
+                agent_names
+                    .get(other_id)
+                    .and_then(|n| capability_summary_for_preset(n))
+            })
+        } else {
+            None
+        };
+
+        let entry = LinkedAgent {
+            name,
+            id: other_id.to_string(),
+            is_human,
+            role,
+            description,
+            capability_summary: capability_summary.map(String::from),
+        };
+
+        let is_hierarchical = link.kind == LinkKind::Hierarchical;
+        let is_two_way = link.direction == LinkDirection::TwoWay;
+
+        if is_superior || (is_hierarchical && !is_subordinate && !is_two_way) {
+            if superiors.len() < 10 {
+                superiors.push(entry);
+            }
+        } else if is_subordinate || (is_hierarchical && is_two_way) {
+            if subordinates.len() < 10 {
+                subordinates.push(entry);
+            }
+        } else if peers.len() < 10 {
+            peers.push(entry);
+        }
+    }
+
+    if superiors.is_empty() && subordinates.is_empty() && peers.is_empty() {
+        None
+    } else {
+        Some(OrgContext {
+            superiors,
+            subordinates,
+            peers,
+        })
+    }
 }
 
 /// Information about a skill for template rendering.

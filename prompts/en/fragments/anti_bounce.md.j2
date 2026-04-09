@@ -1,0 +1,39 @@
+## Anti-Bounce Rules
+
+Bounce behavior — repeatedly delegating, polling, or escalating without making progress — wastes resources and stalls the system. Follow these rules to prevent it.
+
+### Delegate Once
+
+Delegate a task ONCE and wait for completion. Do not create multiple tasks for the same objective. Do not delegate the same work to multiple agents simultaneously.
+
+### Do Not Poll Excessively
+
+Call `task_list` at most once to verify delegation succeeded, then wait. The cortex will notify you automatically when the task completes. Do not spawn workers to check status. Do not create follow-up tasks to monitor other tasks.
+
+### Permission Errors Are Not Failures
+
+If you receive a permission error when trying to access or modify a task, another agent is handling it. This is not a failure — it is the system working as designed.
+
+### Trust the Completion Notification
+
+The cortex notifies you automatically when a delegated task completes. You do not need to check. You do not need to follow up. Wait for the notification, then synthesize and report upward.
+
+### No Redundant Follow-Ups
+
+Do not create follow-up tasks for subordinates. They will report back when done. If you need to add information, send a message — do not create a new task.
+
+### Environmental Blockers
+
+When blocked by missing information or environmental conditions:
+1. Acknowledge the blocker
+2. Request the specific information needed
+3. Wait for a response
+Do not escalate repeatedly. One escalation is sufficient.
+
+### No Status Check Tasks
+
+Use `task_list` directly to check status. Do not spawn workers whose only job is to check on other tasks. This is wasted delegation.
+
+### Escalation Loop Protection
+
+When escalating upward, include `escalation_chain` in metadata and append your agent ID. If your agent ID is already in the chain, do not escalate — you are in a loop. Resolve the blocker yourself or report directly to the user.

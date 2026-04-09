@@ -244,6 +244,67 @@ fn apply_cancelled_warmup_status(
     true
 }
 
+/// Build hierarchy prompt fragments based on the agent's links in the org graph.
+///
+/// Agents with subordinates get delegation + task_access + anti_bounce fragments.
+/// Agents with superiors get notification + anti_bounce fragments.
+/// Agents with no hierarchical links get no hierarchy fragments.
+fn build_hierarchy_prompt(
+    prompt_engine: &crate::prompts::engine::PromptEngine,
+    agent_id: &str,
+    links: &[crate::links::AgentLink],
+) -> String {
+    use crate::links::LinkKind;
+    use minijinja::Value as JinjaValue;
+
+    let mut has_subordinates = false;
+    let mut has_superiors = false;
+
+    for link in links {
+        if link.kind != LinkKind::Hierarchical {
+            continue;
+        }
+
+        if link.from_agent_id == agent_id {
+            has_subordinates = true;
+        }
+        if link.to_agent_id == agent_id {
+            has_superiors = true;
+        }
+    }
+
+    let mut parts = Vec::new();
+
+    if has_subordinates {
+        if let Ok(text) = prompt_engine.render_delegation(JinjaValue::from(())) {
+            parts.push(text);
+        }
+        if let Ok(text) = prompt_engine.render_task_access(JinjaValue::from(())) {
+            parts.push(text);
+        }
+        if let Ok(text) = prompt_engine.render_anti_bounce(JinjaValue::from(())) {
+            parts.push(text);
+        }
+    }
+
+    if has_superiors {
+        if let Ok(text) = prompt_engine.render_notification(JinjaValue::from(())) {
+            parts.push(text);
+        }
+        if !has_subordinates {
+            if let Ok(text) = prompt_engine.render_anti_bounce(JinjaValue::from(())) {
+                parts.push(text);
+            }
+        }
+    }
+
+    if parts.is_empty() {
+        String::new()
+    } else {
+        parts.join("\n\n")
+    }
+}
+
 struct WarmupRunGuard<'a> {
     deps: &'a AgentDeps,
     reason: &'a str,
@@ -3292,26 +3353,52 @@ async fn pickup_one_ready_task(deps: &AgentDeps, logger: &CortexLogger) -> anyho
     let routing = deps.runtime_config.routing.load();
     let model_name = routing.resolve(ProcessType::Worker, None).to_string();
     let tool_use_enforcement = deps.runtime_config.tool_use_enforcement.load();
-    let worker_system_prompt = prompt_engine
-        .render_worker_prompt(
-            &deps.runtime_config.instance_dir.display().to_string(),
-            &deps.runtime_config.workspace_dir.display().to_string(),
-            sandbox_enabled,
-            sandbox_containment_active,
-            sandbox_read_allowlist,
-            sandbox_write_allowlist,
-            &tool_secret_names,
-            browser_config.persist_session,
-            worker_status_text,
-        )
-        .and_then(|prompt| {
-            prompt_engine.maybe_append_tool_use_enforcement(
-                prompt,
-                tool_use_enforcement.as_ref(),
-                &model_name,
+    let is_delegated = task.metadata.get("delegating_agent_id").is_some();
+
+    let worker_system_prompt = {
+        let base = prompt_engine
+            .render_worker_prompt(
+                &deps.runtime_config.instance_dir.display().to_string(),
+                &deps.runtime_config.workspace_dir.display().to_string(),
+                sandbox_enabled,
+                sandbox_containment_active,
+                sandbox_read_allowlist,
+                sandbox_write_allowlist,
+                &tool_secret_names,
+                browser_config.persist_session,
+                worker_status_text,
             )
-        })
-        .map_err(|error| anyhow::anyhow!("failed to render worker prompt: {error}"))?;
+            .and_then(|prompt| {
+                prompt_engine.maybe_append_tool_use_enforcement(
+                    prompt,
+                    tool_use_enforcement.as_ref(),
+                    &model_name,
+                )
+            })
+            .map_err(|error| anyhow::anyhow!("failed to render worker prompt: {error}"))?;
+
+        if is_delegated {
+            let identity_content = deps.runtime_config.identity.load().render();
+            if identity_content.is_empty() {
+                base
+            } else {
+                format!("{base}\n\n{identity_content}")
+            }
+        } else {
+            base
+        }
+    };
+
+    let hierarchy_prompt = build_hierarchy_prompt(
+        &prompt_engine,
+        &deps.agent_id,
+        &deps.links.load(),
+    );
+    let worker_system_prompt = if hierarchy_prompt.is_empty() {
+        worker_system_prompt
+    } else {
+        format!("{worker_system_prompt}\n\n{hierarchy_prompt}")
+    };
 
     let mut task_prompt = format!("Execute task #{}: {}", task.task_number, task.title);
     if let Some(description) = &task.description {
@@ -3344,6 +3431,12 @@ async fn pickup_one_ready_task(deps: &AgentDeps, logger: &CortexLogger) -> anyho
     }
 
     let brave_search_key = (**deps.runtime_config.brave_search_key.load()).clone();
+    let is_delegated = task.metadata.get("delegating_agent_id").is_some();
+    let task_metadata = if is_delegated {
+        Some(task.metadata.clone())
+    } else {
+        None
+    };
     let (worker, inject_tx) = Worker::new(
         None,
         task_prompt,
@@ -3356,6 +3449,7 @@ async fn pickup_one_ready_task(deps: &AgentDeps, logger: &CortexLogger) -> anyho
         Vec::new(), // no initial history for cortex task workers
         crate::conversation::settings::WorkerMemoryMode::None,
         None, // No model override for cortex workers
+        task_metadata,
     );
 
     // Detached workers are not channel-owned, so injection senders are not
@@ -3505,6 +3599,8 @@ async fn pickup_one_ready_task(deps: &AgentDeps, logger: &CortexLogger) -> anyho
                                     &result_text,
                                     true,
                                     &agent_id,
+                                    &task_store,
+                                    &event_tx,
                                     &links,
                                     &agent_names,
                                     &sqlite_pool,
@@ -3584,6 +3680,8 @@ async fn pickup_one_ready_task(deps: &AgentDeps, logger: &CortexLogger) -> anyho
                                     &error_message,
                                     false,
                                     &agent_id,
+                                    &task_store,
+                                    &event_tx,
                                     &links,
                                     &agent_names,
                                     &sqlite_pool,
@@ -3650,6 +3748,8 @@ async fn pickup_one_ready_task(deps: &AgentDeps, logger: &CortexLogger) -> anyho
                                     &error_message,
                                     false,
                                     &agent_id,
+                                    &task_store,
+                                    &event_tx,
                                     &links,
                                     &agent_names,
                                     &sqlite_pool,
@@ -3743,6 +3843,8 @@ async fn pickup_one_ready_task(deps: &AgentDeps, logger: &CortexLogger) -> anyho
                             &timeout_message,
                             false,
                             &agent_id,
+                            &task_store,
+                            &event_tx,
                             &links,
                             &agent_names,
                             &sqlite_pool,
@@ -3871,6 +3973,8 @@ async fn notify_delegation_completion(
     result_summary: &str,
     success: bool,
     executor_agent_id: &str,
+    task_store: &Arc<crate::tasks::TaskStore>,
+    event_tx: &broadcast::Sender<ProcessEvent>,
     links: &arc_swap::ArcSwap<Vec<crate::links::AgentLink>>,
     agent_names: &std::collections::HashMap<String, String>,
     sqlite_pool: &sqlx::SqlitePool,
@@ -3973,6 +4077,43 @@ async fn notify_delegation_completion(
             success,
             "injected delegation completion retrigger"
         );
+    }
+
+    // Auto-complete parent task if this was a delegated subtask.
+    if let Some(parent_task_number) = task.metadata.get("parent_task_number").and_then(|v| v.as_i64()) {
+        let parent_result = task_store.update(
+            parent_task_number,
+            crate::tasks::UpdateTaskInput {
+                status: if task.status == crate::tasks::TaskStatus::Done {
+                    Some(crate::tasks::TaskStatus::Done)
+                } else {
+                    Some(crate::tasks::TaskStatus::Backlog)
+                },
+                ..Default::default()
+            },
+        ).await;
+
+        match parent_result {
+            Ok(Some(parent)) => {
+                tracing::info!(
+                    parent_task = parent.task_number,
+                    child_task = task.task_number,
+                    "parent task auto-completed based on child outcome"
+                );
+                let _ = event_tx.send(ProcessEvent::TaskUpdated {
+                    agent_id: parent.owner_agent_id.clone().into(),
+                    task_number: parent.task_number,
+                    status: parent.status.to_string(),
+                    action: "auto_completed".to_string(),
+                });
+            }
+            Ok(None) => {
+                tracing::warn!(parent_task_number, "parent task not found for auto-completion");
+            }
+            Err(error) => {
+                tracing::warn!(%error, parent_task_number, "failed to auto-complete parent task");
+            }
+        }
     }
 }
 

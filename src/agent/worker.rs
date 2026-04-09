@@ -95,6 +95,8 @@ pub struct Worker {
     pub worker_memory_mode: WorkerMemoryMode,
     /// Model override from conversation settings (per-process or blanket).
     pub model_override: Option<String>,
+    /// Task metadata from the task store, populated for delegated tasks.
+    pub task_metadata: Option<serde_json::Value>,
 }
 
 impl Worker {
@@ -112,6 +114,7 @@ impl Worker {
         initial_history: Vec<rig::message::Message>,
         worker_memory_mode: WorkerMemoryMode,
         model_override: Option<String>,
+        task_metadata: Option<serde_json::Value>,
     ) -> (Self, mpsc::Sender<String>) {
         let id = Uuid::new_v4();
         let process_id = ProcessId::Worker(id);
@@ -149,6 +152,7 @@ impl Worker {
                 },
                 worker_memory_mode,
                 model_override,
+                task_metadata,
             },
             inject_tx,
         )
@@ -172,6 +176,7 @@ impl Worker {
         initial_history: Vec<rig::message::Message>,
         worker_memory_mode: WorkerMemoryMode,
         model_override: Option<String>,
+        task_metadata: Option<serde_json::Value>,
     ) -> (Self, mpsc::Sender<String>) {
         Self::build(
             channel_id,
@@ -186,6 +191,7 @@ impl Worker {
             initial_history,
             worker_memory_mode,
             model_override,
+            task_metadata,
         )
     }
 
@@ -207,6 +213,7 @@ impl Worker {
         initial_history: Vec<rig::message::Message>,
         worker_memory_mode: WorkerMemoryMode,
         model_override: Option<String>,
+        task_metadata: Option<serde_json::Value>,
     ) -> (Self, mpsc::Sender<String>, mpsc::Sender<String>) {
         let (input_tx, input_rx) = mpsc::channel(32);
         let (worker, inject_tx) = Self::build(
@@ -222,6 +229,7 @@ impl Worker {
             initial_history,
             worker_memory_mode,
             model_override,
+            task_metadata,
         );
 
         (worker, input_tx, inject_tx)
@@ -259,6 +267,7 @@ impl Worker {
             Vec::new(), // initial_history - will be replaced by prior_history below
             WorkerMemoryMode::None, // Resumed workers don't have context settings
             None,       // Resumed workers don't have model override
+            None,
         );
         // Reuse the original worker ID so DB row stays linked.
         worker.id = existing_id;
@@ -342,6 +351,7 @@ impl Worker {
             self.deps.runtime_config.clone(),
             self.worker_memory_mode,
             self.deps.memory_search.clone(),
+            None,
         );
 
         let routing = self.deps.runtime_config.routing.load();

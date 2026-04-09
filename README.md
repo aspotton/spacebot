@@ -427,6 +427,60 @@ Scheduled recurring tasks. Each cron job gets a fresh short-lived channel with f
 
 Each agent is an independent entity with its own workspace, databases, identity files, cortex, and messaging bindings. All agents share one binary, one tokio runtime, and one set of API keys.
 
+### Hierarchy Injection System
+
+Behavioral rules are injected dynamically based on agent links, not hardcoded in preset `ROLE.md` files. Any agent can join a hierarchy without modifying their markdown files — Spacebot detects the agent's position via `[[links]]` and injects the appropriate prompt fragments at prompt assembly time.
+
+**How it works:** Four prompt fragments are composed into the agent's system prompt based on its position in the hierarchy:
+
+| Fragment | Injected When | Purpose |
+|----------|---------------|---------|
+| `delegation.md.j2` | Agent has subordinates | Rules for delegating work downward |
+| `notification.md.j2` | Agent has superiors | Rules for escalating and notifying upward |
+| `task_access.md.j2` | Agent has subordinates | Permissions for viewing/modifying subordinate tasks |
+| `anti_bounce.md.j2` | Agent has any links | Prevents bouncing messages back to sender |
+
+**Fragment injection by role:**
+
+- **Agents with subordinates** → delegation fragment + task_access fragment + anti_bounce fragment
+- **Agents with superiors** → notification fragment + anti_bounce fragment
+- **Agents with only peers** → anti_bounce fragment
+
+**Config example:**
+
+```toml
+[[agents]]
+id = "boss-agent"
+preset = "boss-agent"
+
+[[agents]]
+id = "planning-lead"
+preset = "planning-lead"
+
+[[agents]]
+id = "engineering-assistant"
+preset = "engineering-assistant"
+
+[[links]]
+from = "boss-agent"
+to = "planning-lead"
+direction = "two_way"
+kind = "hierarchical"
+
+[[links]]
+from = "planning-lead"
+to = "engineering-assistant"
+direction = "two_way"
+kind = "hierarchical"
+```
+
+**Key features:**
+
+- **Delegation loop detection** — `delegation_chain` tracks the delegation path and prevents circular delegation
+- **Escalation loop detection** — `escalation_chain` prevents infinite escalation cycles
+- **Parent-child task auto-completion** — when a subordinate completes a task, the parent task is automatically updated
+- **In-progress modification guard** — prevents modifying tasks that are actively being worked on
+
 ---
 
 ### Spacedrive Integration (Future)

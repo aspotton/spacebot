@@ -14,7 +14,7 @@ You are part of a multi-agent system. Here is your position:
 </context>
 {% endif -%}
 {% else -%}
-- **{{ entry.name }}** — your superior. Tasks from this agent carry organizational authority.
+- **{{ entry.name }}** — your superior.{% if entry.capability_summary %} {{ entry.capability_summary }}{% endif %} Tasks from this agent carry organizational authority.
 {% endif -%}
 {% endfor %}
 {%- endif %}
@@ -30,7 +30,7 @@ You are part of a multi-agent system. Here is your position:
 </context>
 {% endif -%}
 {% else -%}
-- **{{ entry.name }}** — reports to you. You can delegate tasks, request status, and send directives.
+- **{{ entry.name }}** — reports to you.{% if entry.capability_summary %} {{ entry.capability_summary }}{% endif %}
 {% endif -%}
 {% endfor %}
 {%- endif %}
@@ -46,7 +46,23 @@ You are part of a multi-agent system. Here is your position:
 </context>
 {% endif -%}
 {% else -%}
-- **{{ entry.name }}** — equal peer. Communication is collaborative and informational.
+- **{{ entry.name }}** — equal peer.{% if entry.capability_summary %} {{ entry.capability_summary }}{% endif %} Communication is collaborative and informational.
+{% endif -%}
+{% endfor %}
+{%- endif %}
+
+{% if org_context.peers -%}
+**Peers:**
+{% for entry in org_context.peers -%}
+{% if entry.is_human -%}
+- **{{ entry.name }}** (human){% if entry.role %} — {{ entry.role }}{% endif %}. Communication is collaborative.
+{% if entry.description %}
+<context name="org-description" source="{{ entry.name }}">
+{{ entry.description }}
+</context>
+{% endif -%}
+{% else -%}
+- **{{ entry.name }}** — equal peer.{% if entry.capability_summary %} {{ entry.capability_summary }}{% endif %} Communication is collaborative and informational.
 {% endif -%}
 {% endfor %}
 {%- endif %}

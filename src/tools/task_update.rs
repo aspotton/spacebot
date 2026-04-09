@@ -191,6 +191,26 @@ impl Tool for TaskUpdateTool {
             }
         }
 
+        // For branch-scoped updates (not worker-scoped), check if the task is in_progress
+        // and reject status/title/description changes — only the running worker can modify those.
+        if let TaskUpdateScope::Branch = self.scope {
+            if let Some(ref task) = self
+                .task_store
+                .get_by_number(task_number)
+                .await
+                .map_err(|error| TaskUpdateError(format!("{error}")))?
+            {
+                if task.status == TaskStatus::InProgress {
+                    if args.status.is_some() || args.title.is_some() || args.description.is_some() {
+                        return Err(TaskUpdateError(format!(
+                            "can't modify task #{}: task is in_progress and can only be updated by the running worker. Use metadata updates for tracking.",
+                            task_number
+                        )));
+                    }
+                }
+            }
+        }
+
         let status = match args.status.as_deref() {
             None => None,
             Some(value) => Some(

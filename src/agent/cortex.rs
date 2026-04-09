@@ -249,7 +249,7 @@ fn apply_cancelled_warmup_status(
 /// Agents with subordinates get delegation + task_access + anti_bounce fragments.
 /// Agents with superiors get notification + anti_bounce fragments.
 /// Agents with no hierarchical links get no hierarchy fragments.
-pub(crate) pub(crate) fn build_hierarchy_prompt(
+pub(crate) fn build_hierarchy_prompt(
     prompt_engine: &crate::prompts::engine::PromptEngine,
     agent_id: &str,
     links: &[crate::links::AgentLink],

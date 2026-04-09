@@ -1675,6 +1675,18 @@ impl Channel {
             empty_to_none(channel_activity_map),
         )?;
 
+        // Inject hierarchy behavioral fragments (delegation, notification,
+        // task_access, anti_bounce) for agents that have hierarchical links.
+        // This ensures agents with subordinates/superiors get explicit
+        // instructions on how to delegate rather than doing work themselves.
+        let hierarchy_prompt =
+            crate::agent::cortex::build_hierarchy_prompt(&prompt_engine, &self.deps.agent_id, &self.deps.links.load());
+        let system_prompt = if hierarchy_prompt.is_empty() {
+            system_prompt
+        } else {
+            format!("{system_prompt}\n\n{hierarchy_prompt}")
+        };
+
         prompt_engine.maybe_append_tool_use_enforcement(
             system_prompt,
             tool_use_enforcement.as_ref(),

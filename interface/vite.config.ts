@@ -3,60 +3,63 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-const spaceui = path.resolve(__dirname, "../../spaceui/packages");
+	const spaceui = path.resolve(__dirname, "../../spaceui/packages");
 
-export default defineConfig({
-	plugins: [react(), tailwindcss()],
+	export default defineConfig({
+		plugins: [react(), tailwindcss()],
 
-	resolve: {
-		dedupe: ["react", "react-dom"],
-		alias: [
-			// Pin React to a single copy (prevents "Invalid hook call")
-			{
-				find: /^react$/,
-				replacement: path.resolve(
-					__dirname,
-					"./node_modules/react/index.js",
-				),
-			},
-			{
-				find: /^react\/jsx-runtime$/,
-				replacement: path.resolve(
-					__dirname,
-					"./node_modules/react/jsx-runtime.js",
-				),
-			},
-			{
-				find: /^react\/jsx-dev-runtime$/,
-				replacement: path.resolve(
-					__dirname,
-					"./node_modules/react/jsx-dev-runtime.js",
-				),
-			},
-			{
-				find: /^react-dom$/,
-				replacement: path.resolve(
-					__dirname,
-					"./node_modules/react-dom/index.js",
-				),
-			},
-			{
-				find: /^react-dom\/client$/,
-				replacement: path.resolve(
-					__dirname,
-					"./node_modules/react-dom/client.js",
-				),
-			},
+		resolve: {
+			dedupe: ["react", "react-dom"],
+			alias: [
+				// Pin React to a single copy (prevents "Invalid hook call")
+				{
+					find: /^react$/,
+					replacement: path.resolve(
+						__dirname,
+						"./node_modules/react/index.js",
+					),
+				},
+				{
+					find: /^react\/jsx-runtime$/,
+					replacement: path.resolve(
+						__dirname,
+						"./node_modules/react/jsx-runtime.js",
+					),
+				},
+				{
+					find: /^react\/jsx-dev-runtime$/,
+					replacement: path.resolve(
+						__dirname,
+						"./node_modules/react/jsx-dev-runtime.js",
+					),
+				},
+				{
+					find: /^react-dom$/,
+					replacement: path.resolve(
+						__dirname,
+						"./node_modules/react-dom/index.js",
+					),
+				},
+				{
+					find: /^react-dom\/client$/,
+					replacement: path.resolve(
+						__dirname,
+						"./node_modules/react-dom/client.js",
+					),
+				},
 
-			// SpaceUI — resolve to source for HMR
-			{
-				find: "@spacedrive/tokens/src/css",
-				replacement: `${spaceui}/tokens/src/css`,
-			},
-			{
-				find: "@spacedrive/tokens",
-				replacement: `${spaceui}/tokens`,
-			},
+				// SpaceUI - prefer source for HMR during local dev, fallback to node_modules
+				{
+					find: "@spacedrive/tokens/src/css",
+					replacement: `${spaceui}/tokens/src/css`,
+				},
+				{
+					find: "@spacedrive/tokens",
+					replacement: path.resolve(
+						__dirname,
+						"./node_modules/@spacedrive/tokens",
+					),
+				},
 			{
 				find: "@spacedrive/primitives",
 				replacement: `${spaceui}/primitives/src/index.ts`,

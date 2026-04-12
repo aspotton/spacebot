@@ -9,17 +9,17 @@
 @import "tailwindcss";
 
 /* SpaceUI design tokens */
-@import "node_modules/@spacedrive/tokens/src/css/base.css";
-@import "node_modules/@spacedrive/tokens/src/css/theme.css";
+@import "~@spacedrive/tokens/src/css/base.css";
+@import "~@spacedrive/tokens/src/css/theme.css";
 
 /* Themes */
-@import "node_modules/@spacedrive/tokens/src/css/themes/light.css";
-@import "node_modules/@spacedrive/tokens/src/css/themes/dark.css";
-@import "node_modules/@spacedrive/tokens/src/css/themes/midnight.css";
-@import "node_modules/@spacedrive/tokens/src/css/themes/noir.css";
-@import "node_modules/@spacedrive/tokens/src/css/themes/slate.css";
-@import "node_modules/@spacedrive/tokens/src/css/themes/nord.css";
-@import "node_modules/@spacedrive/tokens/src/css/themes/mocha.css";
+@import "~@spacedrive/tokens/src/css/themes/light.css";
+@import "~@spacedrive/tokens/src/css/themes/dark.css";
+@import "~@spacedrive/tokens/src/css/themes/midnight.css";
+@import "~@spacedrive/tokens/src/css/themes/noir.css";
+@import "~@spacedrive/tokens/src/css/themes/slate.css";
+@import "~@spacedrive/tokens/src/css/themes/nord.css";
+@import "~@spacedrive/tokens/src/css/themes/mocha.css";
 
 /* Tell Tailwind to scan SpaceUI component source for classes */
 @source "../../../spaceui/packages/primitives/src";

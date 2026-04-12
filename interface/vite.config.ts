@@ -60,6 +60,70 @@ import { defineConfig } from "vite";
 						"./node_modules/@spacedrive/tokens",
 					),
 				},
+				// Explicit aliases for @spacedrive/tokens exports that Tailwind needs to resolve
+				{
+					find: "@spacedrive/tokens/theme",
+					replacement: path.resolve(
+						__dirname,
+						"./node_modules/@spacedrive/tokens/src/css/theme.css",
+					),
+				},
+				{
+					find: "@spacedrive/tokens/css",
+					replacement: path.resolve(
+						__dirname,
+						"./node_modules/@spacedrive/tokens/src/css/base.css",
+					),
+				},
+				{
+					find: "@spacedrive/tokens/css/themes/light",
+					replacement: path.resolve(
+						__dirname,
+						"./node_modules/@spacedrive/tokens/src/css/themes/light.css",
+					),
+				},
+				{
+					find: "@spacedrive/tokens/css/themes/dark",
+					replacement: path.resolve(
+						__dirname,
+						"./node_modules/@spacedrive/tokens/src/css/themes/dark.css",
+					),
+				},
+				{
+					find: "@spacedrive/tokens/css/themes/midnight",
+					replacement: path.resolve(
+						__dirname,
+						"./node_modules/@spacedrive/tokens/src/css/themes/midnight.css",
+					),
+				},
+				{
+					find: "@spacedrive/tokens/css/themes/noir",
+					replacement: path.resolve(
+						__dirname,
+						"./node_modules/@spacedrive/tokens/src/css/themes/noir.css",
+					),
+				},
+				{
+					find: "@spacedrive/tokens/css/themes/slate",
+					replacement: path.resolve(
+						__dirname,
+						"./node_modules/@spacedrive/tokens/src/css/themes/slate.css",
+					),
+				},
+				{
+					find: "@spacedrive/tokens/css/themes/nord",
+					replacement: path.resolve(
+						__dirname,
+						"./node_modules/@spacedrive/tokens/src/css/themes/nord.css",
+					),
+				},
+				{
+					find: "@spacedrive/tokens/css/themes/mocha",
+					replacement: path.resolve(
+						__dirname,
+						"./node_modules/@spacedrive/tokens/src/css/themes/mocha.css",
+					),
+				},
 			{
 				find: "@spacedrive/primitives",
 				replacement: `${spaceui}/primitives/src/index.ts`,

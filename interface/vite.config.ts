@@ -124,21 +124,35 @@ import { defineConfig } from "vite";
 						"./node_modules/@spacedrive/tokens/src/css/themes/mocha.css",
 					),
 				},
+			// SpaceUI packages - resolve from node_modules for Docker builds
+			// These packages are installed via npm, not symlinked from spaceui/
 			{
 				find: "@spacedrive/primitives",
-				replacement: `${spaceui}/primitives/src/index.ts`,
+				replacement: path.resolve(
+					__dirname,
+					"./node_modules/@spacedrive/primitives",
+				),
 			},
 			{
 				find: "@spacedrive/ai",
-				replacement: `${spaceui}/ai/src/index.ts`,
+				replacement: path.resolve(
+					__dirname,
+					"./node_modules/@spacedrive/ai",
+				),
 			},
 			{
 				find: "@spacedrive/forms",
-				replacement: `${spaceui}/forms/src/index.ts`,
+				replacement: path.resolve(
+					__dirname,
+					"./node_modules/@spacedrive/forms",
+				),
 			},
 			{
 				find: "@spacedrive/explorer",
-				replacement: `${spaceui}/explorer/src/index.ts`,
+				replacement: path.resolve(
+					__dirname,
+					"./node_modules/@spacedrive/explorer",
+				),
 			},
 
 			// Project alias

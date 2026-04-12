@@ -33,7 +33,7 @@ RUN mkdir -p src/bin && echo "fn main() {}" > src/main.rs && touch src/lib.rs \
     && rm -rf src
 
 # 2. Install frontend dependencies.
-COPY interface/package.json interface/
+COPY interface/package.json interface/bun.lock interface/
 RUN cd interface && bun install
 
 # 3. Build the OpenCode embed bundle (live coding UI in Workers tab).

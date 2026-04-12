@@ -21,11 +21,15 @@
 @import "../node_modules/@spacedrive/tokens/src/css/themes/nord.css";
 @import "../node_modules/@spacedrive/tokens/src/css/themes/mocha.css";
 
-/* Tell Tailwind to scan SpaceUI component source for classes */
-@source "../../../spaceui/packages/primitives/src";
+/* Tell Tailwind to scan SpaceUI component source for classes
+   Note: These paths are only valid in local dev with SpaceUI symlinked.
+   In Docker builds, SpaceUI is installed via npm and classes are already
+   included in the bundled output, so these can be safely ignored/commented.
+*/
+/* @source "../../../spaceui/packages/primitives/src";
 @source "../../../spaceui/packages/ai/src";
 @source "../../../spaceui/packages/forms/src";
-@source "../../../spaceui/packages/explorer/src";
+@source "../../../spaceui/packages/explorer/src"; */
 
 /* Override default font to IBM Plex Sans */
 @theme {
